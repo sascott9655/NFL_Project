@@ -1,16 +1,7 @@
-from db import get_connection, execute
+from db import get_connection, fetchone
 
-def insert_seasons(year):
+def get_season_id(year):
     conn = get_connection()
-
-    sql = ''' INSERT INTO Seasons (year)
-        VALUES (%s)  
-        ON DUPLICATE KEY UPDATE year = year
-        '''
-    
-
-    execute(conn, sql, (year,))
-    conn.commit()
+    row = fetchone(conn, "SELECT season_id FROM Seasons WHERE year = %s", (year,))
     conn.close()
-
-insert_seasons(2025)
+    return row[0] #returns 2025
