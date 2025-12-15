@@ -1,75 +1,89 @@
-#import a function that connects to db in db.py
-from db import get_connection, execute, fetchone, fetchall
-import requests #requests are calls for online apis like espn's
-from pprint import pprint
+from db import get_connection, execute
+from db_helpers import get_season_id, get_week_id, get_team_id
+from espn_api import fetch_full_season
+from abbrev_map import normalize_abbrev
+from datetime import datetime
 
-# #function that inserts web scraped data in database (we havent web scraped yet)
-# def insert_game(game):
-#     conn = get_connection()
+def insert_games(conn, games): #games is the parsed JSON response from scoreboard api endpoint
+    if not games.get('events'): #deals with teams on a bye week
+        return 
     
-#     sql="""
-#         INSERT INTO Games (
-#             game_id, week_id, season_id, home_team_id, away_team_id,
-#             home_score, away_score, game_date, status
-#             )
-#         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-#         ON DUPLICATE KEY UPDATE
-#             home_score=VALUES(home_score),
-#             away_score=VALUES(away_score).
-#             status = VALUES(status),
-#             game_date = VALUES(game_date);
-#         """
-#     params = (
-#         game['game_id'], # ex: "401772948"
-#         game['week_id'], # ex: 1
-#         game['season_id'], # ex: 2024
-#         game['home_team_id'], #ex: 49ers
-#         game['away_team_id'], #ex: Eagles
-#         game['home_score'], # ex: 31
-#         game['away_score'], # ex: 28
-#         game['game_date'], #ex: 2024-09-07T20:25Z 
-#         game['status'] #ex: Final
-#     )
+    for game in games['events']: #for each football game in the api
+        game_id = int(game['id']) #retrieve the espn game id 
+        espn_date = game['date'] #an ISO 8601 does not automatically convert to DATETIME in our database
+        game_date = datetime.strptime(espn_date, "%Y-%m-%dT%H:%MZ")
 
-#     execute(sql, params)
-#     conn.commit()
-#     conn.close()
+        #variables that are retreiving espn api information
+        season_year = game['season']['year']
+        season_type = game['season']['type'] # 2 regular 3 playoffs
+        week_number = game['week']['number']
 
-    #I want to link my own understanding and documentation via link
-    #to show my learning and be able to explain to other people my
-    #project. For now I will show it here.
-    #Example of JSON output from ESPN scoreboard:
+        #making sure season_id and week_id keys align in the Seasons and Weeks tables
+        season_id = get_season_id(conn, season_year)
+        week_id = get_week_id(conn, season_id, season_type, week_number)
 
-HEADERS = {
-    "User-Agent": "nfl-scraper/1.0 (+https://yourdomain.example) Python/requests"
-}
+        competition = game['competitions'][0] # main competition object for the game (scores, teams, status)
+        status = competition['status']['type']['name'] #status of game
 
-SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+        #determining which of two teams is the home team
+        home = away = None
+        
+        for c in competition['competitors']:
+            if c['homeAway'] == 'home':
+                home = c
+            elif c['homeAway'] == "away":
+                away = c
 
-resp = requests.get(SCOREBOARD_URL, headers=HEADERS)
-data = resp.json()
+        if not home or not away: #in case there is a game with no competitors
+            continue
 
-# Look at the first game
-first_game = data["events"][0]
-competitors = first_game["competitions"][0]["competitors"]
+        #Calling our normalize abbrev function to check if teams have 
+        #different mapping from the databases. If they do the abbreviation
+        #should convert to the one in the database and therefore are able to
+        #retrieve the appropriate team_id for the game
 
-for team in competitors:
-    pprint(team) #pretty print
+        home_abbrev = normalize_abbrev(home['team']['abbreviation'])
+        away_abbrev = normalize_abbrev(away['team']['abbreviation'])
 
-    
+        invalid_abbrev = ["TBD", "AFC", "NFC"]
 
+        #in keyword is like contains. (e.g) Does home_abbrev contain TBD OR AFC OR NFC?
+        if home_abbrev in invalid_abbrev or away_abbrev in invalid_abbrev:
+            continue
 
-    #When scraping from ESPN only team abbreviations will be used and 
-    #not the team_id used in my database. Therefore it is necessary to
-    #create a map and convert the ESPN abbreviations to the team_id
-    #to read team information on game day
+        home_team_id = get_team_id(conn, home_abbrev)
+        away_team_id = get_team_id(conn, away_abbrev)
 
-    # TEAM_MAP = {
-    #     "":
+        #the if and else statement after getting the score is used during 
+        #a live game so it wont crash if no score exist yet and if the scores
+        #need to update they can
+        home_score = int(home['score']) if home.get('score') is not None else None
+        away_score = int(away['score']) if away.get('score') is not None else None
 
-    # }
+        execute(conn, """
+                INSERT INTO Games (
+                game_id, week_id, season_id,
+                home_team_id, away_team_id,
+                home_score, away_score,
+                game_date, status
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    home_score=VALUES(home_score),
+                    away_score=VALUES(away_score),
+                    status=VALUES(status)
+                """, (
+                    game_id, week_id, season_id, home_team_id,
+                    away_team_id, home_score, away_score,
+                    game_date, status
+                ))
+        
+def run(season):
+    conn = get_connection()
+    for week_data in fetch_full_season(season):
+        insert_games(conn, week_data)
+    conn.commit()
+    conn.close()
 
-    
-
-
-
+if __name__ == "__main__":
+    run(2025)
