@@ -1,6 +1,5 @@
-from db import get_connection, execute
+from db import execute
 from db_helpers import get_season_id, get_week_id, get_team_id
-from espn_api import fetch_full_season
 from abbrev_map import normalize_abbrev
 from datetime import datetime
 
@@ -15,7 +14,7 @@ def insert_games(conn, games): #games is the parsed JSON response from scoreboar
 
         #variables that are retreiving espn api information
         season_year = game['season']['year']
-        season_type = game['season']['type'] # 2 regular 3 playoffs
+        season_type = game['season']['type'] 
         week_number = game['week']['number']
 
         #making sure season_id and week_id keys align in the Seasons and Weeks tables
@@ -77,13 +76,3 @@ def insert_games(conn, games): #games is the parsed JSON response from scoreboar
                     away_team_id, home_score, away_score,
                     game_date, status
                 ))
-        
-def run(season):
-    conn = get_connection()
-    for week_data in fetch_full_season(season):
-        insert_games(conn, week_data)
-    conn.commit()
-    conn.close()
-
-if __name__ == "__main__":
-    run(2025)

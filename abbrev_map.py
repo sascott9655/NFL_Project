@@ -13,6 +13,5 @@ ESPN_ABBREV_MAP = {
 }
 
 
-
 def normalize_abbrev(abbrev):
     return ESPN_ABBREV_MAP.get(abbrev, abbrev)
