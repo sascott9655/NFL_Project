@@ -60,17 +60,18 @@ def insert_games(conn, games): #games is the parsed JSON response from scoreboar
         away_score = int(away['score']) if away.get('score') is not None else None
 
         execute(conn, """
-                INSERT INTO Games (
+                INSERT INTO games (
                 game_id, week_id, season_id,
                 home_team_id, away_team_id,
                 home_score, away_score,
                 game_date, status
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    home_score=VALUES(home_score),
-                    away_score=VALUES(away_score),
-                    status=VALUES(status)
+                ON CONFLICT (game_id) DO UPDATE
+                SET
+                    home_score = EXCLUDED.home_score,
+                    away_score = EXCLUDED.away_score,
+                    status = EXCLUDED.status
                 """, (
                     game_id, week_id, season_id, home_team_id,
                     away_team_id, home_score, away_score,

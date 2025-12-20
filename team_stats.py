@@ -1,4 +1,4 @@
-from db import execute, fetchone, get_connection
+from db import execute, fetchone
 from db_helpers import get_team_id
 from espn_api import fetch_team_stats
 from abbrev_map import normalize_abbrev
@@ -32,7 +32,7 @@ def insert_team_stats(conn, game_id):
             return
 
         execute(conn, """
-                INSERT INTO TeamStats (
+                INSERT INTO team_stats (
                 game_id, team_id, win,
                 first_downs, total_plays, total_yards, ypp,
                 tot_pass_yards, interceptions, sacks, tot_rush_yards,
@@ -42,25 +42,25 @@ def insert_team_stats(conn, game_id):
                 VALUES (%s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    win=VALUES(win),
-                    first_downs=VALUES(first_downs),
-                    total_plays=VALUES(total_plays),
-                    total_yards=VALUES(total_yards),
-                    ypp=VALUES(ypp),
-                    tot_pass_yards=VALUES(tot_pass_yards),
-                    interceptions=VALUES(interceptions),
-                    sacks=VALUES(sacks),
-                    tot_rush_yards=VALUES(tot_rush_yards),
-                    third_down_conversions=VALUES(third_down_conversions),
-                    third_down_attempts=VALUES(third_down_attempts),
-                    fourth_down_conversions=VALUES(fourth_down_conversions),
-                    fourth_down_attempts=VALUES(fourth_down_attempts),
-                    redzone_conversions=VALUES(redzone_conversions),
-                    redzone_attempts=VALUES(redzone_attempts),
-                    penalties=VALUES(penalties),
-                    fumbles=VALUES(fumbles),
-                    time_poss_seconds=VALUES(time_poss_seconds)
+                ON CONFLICT (game_id, team_id) DO UPDATE SET
+                    win= EXCLUDED.win,
+                    first_downs = EXCLUDED.first_downs,
+                    total_plays = EXCLUDED.total_plays,
+                    total_yards = EXCLUDED.total_yards,
+                    ypp = EXCLUDED.ypp,
+                    tot_pass_yards = EXCLUDED.tot_pass_yards,
+                    interceptions = EXCLUDED.interceptions,
+                    sacks = EXCLUDED.sacks,
+                    tot_rush_yards = EXCLUDED.tot_rush_yards,
+                    third_down_conversions = EXCLUDED.third_down_conversions,
+                    third_down_attempts = EXCLUDED.third_down_attempts,
+                    fourth_down_conversions = EXCLUDED.fourth_down_conversions,
+                    fourth_down_attempts = EXCLUDED.fourth_down_attempts,
+                    redzone_conversions = EXCLUDED.redzone_conversions,
+                    redzone_attempts = EXCLUDED.redzone_attempts,
+                    penalties = EXCLUDED.penalties,
+                    fumbles = EXCLUDED.fumbles,
+                    time_poss_seconds = EXCLUDED.time_poss_seconds;
                 """, (
                     game_id, team_id, win, 
                     int(stats.get('firstDowns', 0)),

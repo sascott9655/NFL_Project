@@ -7,16 +7,13 @@ from team_stats import insert_team_stats
 def connector(season):
     conn = get_connection()
     for week_json in fetch_reg_season(season):
-        insert_games(conn, week_json)
+        insert_games(conn, week_json) 
 
-    games = fetchall(conn,"SELECT game_id FROM Games")
-    print(len(games))
+    games = fetchall(conn,"SELECT game_id FROM games")
     for (game_id,) in games:
         insert_team_stats(conn, game_id)
 
     conn.commit()
-
- 
     conn.close()
 
 if __name__ == "__main__":
