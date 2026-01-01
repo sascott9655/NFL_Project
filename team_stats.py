@@ -4,8 +4,8 @@ from espn_api import fetch_team_stats
 from abbrev_map import normalize_abbrev
 
 #we are also transforming our stats so it is easier to say run a model to predict win outcomes
-def insert_team_stats(conn, game_id):
-    game_id = int(game_id)
+def insert_team_stats(conn, game):
+    game_id = int(game["game_id"])
     team_stats = fetch_team_stats(game_id) #obtain appropriate game id
 
     teams = team_stats['boxscore']['teams'] #get the teams from the boxscore

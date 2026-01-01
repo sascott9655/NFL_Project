@@ -54,6 +54,7 @@ def insert_teams():
     conn = get_connection()
 
     for team in teams:
+        print(team["team_id"])
         execute(conn, """
                 INSERT INTO teams (team_id, abbrev, name,
                 city, logo, conference, division)

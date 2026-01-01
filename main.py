@@ -9,9 +9,17 @@ def connector(season):
     for week_json in fetch_reg_season(season):
         insert_games(conn, week_json) 
 
-    games = fetchall(conn,"SELECT game_id FROM games")
+    games = fetchall(
+    conn,
+    """
+    SELECT game_id
+    FROM games
+    WHERE status = 'STATUS_FINAL'
+    """
+    )
+
     for (game_id,) in games:
-        insert_team_stats(conn, game_id)
+        insert_team_stats(conn, {"game_id": game_id})
 
     conn.commit()
     conn.close()
