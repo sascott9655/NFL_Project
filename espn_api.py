@@ -32,5 +32,5 @@ def fetch_team_stats(event_id):
     }
     resp = requests.get(GAME_SUMMARY_URL, params=params, timeout=25)
     resp.raise_for_status()
-    return resp.json()
 
+    return resp.json()

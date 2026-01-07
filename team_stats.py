@@ -20,6 +20,7 @@ def insert_team_stats(conn, game):
         td_made, td_att = parse_made_att(stats.get('thirdDownEff'))
         fd_made, fd_att = parse_made_att(stats.get('fourthDownEff'))
         rz_made, rz_att = parse_made_att(stats.get('redZoneAttempts'))
+        penalties, penalty_yds = parse_made_att(stats.get('totalPenaltiesYards'))
 
         
 
@@ -37,11 +38,11 @@ def insert_team_stats(conn, game):
                 first_downs, total_plays, total_yards, ypp,
                 tot_pass_yards, interceptions, sacks, tot_rush_yards,
                 third_down_conversions, third_down_attempts, fourth_down_conversions, fourth_down_attempts,
-                redzone_conversions, redzone_attempts, penalties, fumbles,
+                redzone_conversions, redzone_attempts, penalties, penalty_yds, fumbles,
                 time_poss_seconds)
                 VALUES (%s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s)
+                        %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (game_id, team_id) DO UPDATE SET
                     win= EXCLUDED.win,
                     first_downs = EXCLUDED.first_downs,
@@ -59,6 +60,7 @@ def insert_team_stats(conn, game):
                     redzone_conversions = EXCLUDED.redzone_conversions,
                     redzone_attempts = EXCLUDED.redzone_attempts,
                     penalties = EXCLUDED.penalties,
+                    penalty_yds = EXCLUDED.penalty_yds,
                     fumbles = EXCLUDED.fumbles,
                     time_poss_seconds = EXCLUDED.time_poss_seconds;
                 """, (
@@ -74,7 +76,7 @@ def insert_team_stats(conn, game):
                     td_made, td_att,
                     fd_made, fd_att,
                     rz_made, rz_att,
-                    int(stats.get('penalties', 0)),
+                    penalties, penalty_yds,
                     int(stats.get('fumblesLost', 0)),
                     time_poss_seconds
                 ))
@@ -88,6 +90,7 @@ def parse_made_att(value, default="0-0"):
         return 0, 0
     made, att = value.split("-")
     return int(made), int(att)
+
 
 def parse_time_possession(value):
     """
