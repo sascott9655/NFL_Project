@@ -21,6 +21,7 @@ def insert_team_stats(conn, game):
         fd_made, fd_att = parse_made_att(stats.get('fourthDownEff'))
         rz_made, rz_att = parse_made_att(stats.get('redZoneAttempts'))
         penalties, penalty_yds = parse_made_att(stats.get('totalPenaltiesYards'))
+        sacks, sack_yds_lost = parse_made_att(stats.get('sacksYardsLost'))
 
         
 
@@ -36,13 +37,13 @@ def insert_team_stats(conn, game):
                 INSERT INTO team_stats (
                 game_id, team_id, win,
                 first_downs, total_plays, total_yards, ypp,
-                tot_pass_yards, interceptions, sacks, tot_rush_yards,
+                tot_pass_yards, interceptions, sacks, sack_yds_lost, tot_rush_yards,
                 third_down_conversions, third_down_attempts, fourth_down_conversions, fourth_down_attempts,
                 redzone_conversions, redzone_attempts, penalties, penalty_yds, fumbles,
                 time_poss_seconds)
                 VALUES (%s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s)
+                        %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (game_id, team_id) DO UPDATE SET
                     win= EXCLUDED.win,
                     first_downs = EXCLUDED.first_downs,
@@ -52,6 +53,7 @@ def insert_team_stats(conn, game):
                     tot_pass_yards = EXCLUDED.tot_pass_yards,
                     interceptions = EXCLUDED.interceptions,
                     sacks = EXCLUDED.sacks,
+                    sack_yds_lost = EXCLUDED.sack_yds_lost,
                     tot_rush_yards = EXCLUDED.tot_rush_yards,
                     third_down_conversions = EXCLUDED.third_down_conversions,
                     third_down_attempts = EXCLUDED.third_down_attempts,
@@ -71,7 +73,7 @@ def insert_team_stats(conn, game):
                     float(stats.get('yardsPerPlay', 0)),
                     int(stats.get('netPassingYards', 0)),
                     int(stats.get('interceptions', 0)),
-                    int(stats.get('sacks', 0)),
+                    sacks, sack_yds_lost,
                     int(stats.get('rushingYards', 0)),
                     td_made, td_att,
                     fd_made, fd_att,
